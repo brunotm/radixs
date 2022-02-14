@@ -28,13 +28,13 @@ linters:
     - typecheck
     - unconvert
     - unparam
-    - unused
     - varcheck
   disable:
     # high rate of false positives
     - lll
     - scopelint
     - deadcode
+    - unused
 issues:
   exclude:
     - S1010 # tail index usage when slicing, which is needed to avoid allocations
