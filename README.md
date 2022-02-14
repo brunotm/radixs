@@ -3,7 +3,7 @@
 
 <a href="https://en.wikipedia.org/wiki/Radix_tree">
 <img style="float: right;" src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Patricia_trie.svg"></a>
-A Go implementation of a radix tree, that uses binary searches to speeding up insert, retrieve and delete operations specially on dense trees. This implementation additionally eliminate edge specific types and pointers in order to save memory and allocations on dense trees.
+A Go implementation of a radix tree, that uses binary searches to speed up insert, retrieve and delete operations on dense trees. This implementation additionally eliminate edge specific types and pointers in order to save memory and allocations on dense trees.
 
 ___
 ## Usage
