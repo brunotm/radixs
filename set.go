@@ -6,7 +6,7 @@ import (
 
 // Set or update the value for the given key
 func (t *Tree) Set(key string, value interface{}) (ok bool) {
-	if len(key) == 0 || value == nil {
+	if key == "" || value == nil {
 		return false
 	}
 

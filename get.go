@@ -7,7 +7,7 @@ import (
 // Get retrieves the value for the given key.
 // It returns false if the key was not found.
 func (t *Tree) Get(key string) (value interface{}, ok bool) {
-	if len(key) == 0 {
+	if key == "" {
 		return nil, false
 	}
 

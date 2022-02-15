@@ -1,7 +1,7 @@
 package radixs
 
 // Tree is a compact radix (compact prefix) tree which is guaranteed
-// to be sorted. Key/Value pairs are always inserted, retrived and updated
+// to be sorted. Key/Value pairs are always inserted, retrieved and updated
 // using binary searches making the tree operations very efficient
 // for large trees.
 type Tree struct {
@@ -76,9 +76,8 @@ type stringBuilder struct {
 	buf []byte
 }
 
-func (b *stringBuilder) WriteString(s string) (int, error) {
+func (b *stringBuilder) WriteString(s string) {
 	b.buf = append(b.buf, s...)
-	return len(s), nil
 }
 
 func (b *stringBuilder) String() string {

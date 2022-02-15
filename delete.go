@@ -15,7 +15,7 @@ func (t *Tree) delete(key string, prefix bool) (ok bool) {
 
 		// do a binary search for the key prefix in the current node children
 		i := sort.Search(len(n.children), func(x int) bool {
-			if len(key) == 0 {
+			if key == "" {
 				return true
 			}
 

@@ -1,8 +1,8 @@
 package radixs
 
 import (
+	"crypto/rand"
 	"fmt"
-	"math/rand"
 	"testing"
 )
 
