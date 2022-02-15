@@ -1,6 +1,14 @@
 # radixs
 
-A Go implementation of a radix tree, that uses binary searches to speed up insert, retrieve and delete operations on dense trees. This implementation additionally eliminate edge specific types and pointers in order to save memory and allocations on dense trees.
+A Go implementation of a radix tree for building fast and compact in-memory indexes, that uses binary searches to speed up insert, retrieve and delete operations on dense trees.
+
+This implementation in addition of using binary searches for:
+
+- eliminate edge specific types and pointers in order to save memory and allocations on dense trees.
+- insert, retrieve and delete operations are non recursive in order to avoid the lack of tail call optimization in the Go compiler.
+- tree nodes are memory aligned for optimal space utilization.
+- supports longest prefix partial matches
+
 
 ___
 ## Usage
