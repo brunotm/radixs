@@ -8,7 +8,7 @@ type node struct {
 	children []*node     // []*radixscratch.node: 0-24 (size 24, align 8)
 	key      string      // string: 24-40 (size 16, align 8)
 	value    interface{} // interface{}: 40-56 (size 16, align 8)
-	parent   *node       // *radixscratch.node: 72-80 (size 8, align 8)
+	parent   *node       // *radixs.node: 72-80 (size 8, align 8)
 }
 
 func (n *node) iter(prefix string, f func(key string, value interface{}) bool) (ok bool) {
