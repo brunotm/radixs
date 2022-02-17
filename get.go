@@ -7,9 +7,9 @@ import (
 
 // GetWithParams is like Get but extracts path parameters and stores them
 // into the provided params argument which will be accessible after GetWithParams returns.
-func (t *Tree) GetWithParams(key string, params map[string]string) (value interface{}, ok bool) {
+func (t *Tree) GetWithParams(key string, params map[string]string) (value interface{}, err error) {
 	if key == "" {
-		return nil, false
+		return nil, ErrEmptyKey
 	}
 
 	n := t.root
@@ -33,7 +33,7 @@ func (t *Tree) GetWithParams(key string, params map[string]string) (value interf
 
 		// end of search no node with prefix found
 		if i >= len(n.children) {
-			return nil, false
+			return nil, ErrKeyNotFound
 		}
 
 		pIdx := strings.IndexByte(n.children[i].key, t.parameter)
@@ -50,7 +50,7 @@ func (t *Tree) GetWithParams(key string, params map[string]string) (value interf
 			}
 
 			if dIdx < 0 {
-				return n.children[i].value, true
+				return n.children[i].value, nil
 			}
 
 			key = n.children[i].key + key
@@ -59,9 +59,13 @@ func (t *Tree) GetWithParams(key string, params map[string]string) (value interf
 
 		}
 
+		// exact match found
 		if n.children[i].key == key {
-			// exact match found
-			return n.children[i].value, n.children[i].value != nil
+			if n.children[i].value == nil {
+				return nil, ErrKeyNotFound
+			}
+
+			return n.children[i].value, nil
 		}
 
 		// child is a prefix of the search key, continue
@@ -71,9 +75,9 @@ func (t *Tree) GetWithParams(key string, params map[string]string) (value interf
 
 // Get retrieves the value for the given key.
 // It returns false if the key was not found.
-func (t *Tree) Get(key string) (value interface{}, ok bool) {
+func (t *Tree) Get(key string) (value interface{}, err error) {
 	if key == "" {
-		return nil, false
+		return nil, ErrEmptyKey
 	}
 
 	n := t.root
@@ -90,12 +94,16 @@ func (t *Tree) Get(key string) (value interface{}, ok bool) {
 
 		// end of search no node with prefix found
 		if i >= len(n.children) {
-			return nil, false
+			return nil, ErrKeyNotFound
 		}
 
 		// exact match found
 		if n.children[i].key == key {
-			return n.children[i].value, n.children[i].value != nil
+			if n.children[i].value == nil {
+				return nil, ErrKeyNotFound
+			}
+
+			return n.children[i].value, nil
 		}
 
 		// child is a prefix of the search key, continue
@@ -105,7 +113,7 @@ func (t *Tree) Get(key string) (value interface{}, ok bool) {
 
 // LongestMatch is like Get, but instead of an
 // exact match, it will return the longest prefix match.
-func (t *Tree) LongestMatch(key string) (match string, value interface{}, ok bool) {
+func (t *Tree) LongestMatch(key string) (match string, value interface{}, err error) {
 	n := t.root
 	for {
 		// obtain the longest common prefix for the current search key and node key
@@ -126,18 +134,21 @@ func (t *Tree) LongestMatch(key string) (match string, value interface{}, ok boo
 				match = match[:len(match)-pi]
 
 				if n.value != nil {
-					return match, n.value, true
+					return match, n.value, nil
 				}
 
 				if n.parent == nil {
-					return "", nil, false
+					return "", nil, ErrKeyNotFound
 				}
 			}
 		}
 
 		// exact match found
 		if n.children[i].key == key {
-			return match + n.children[i].key, n.children[i].value, n.children[i].value != nil
+			if n.children[i].value == nil {
+				return "", nil, ErrKeyNotFound
+			}
+			return match + n.children[i].key, n.children[i].value, nil
 		}
 
 		// child is a prefix of the search key, continue
