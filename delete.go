@@ -6,6 +6,10 @@ import (
 
 // delete removes both keys and prefixes if specified
 func (t *Tree) delete(key string, prefix bool) (ok bool) {
+	if key == "" {
+		return false
+	}
+
 	n := t.root
 	for {
 		// find and remove the longest common prefix for
@@ -57,7 +61,7 @@ func (t *Tree) delete(key string, prefix bool) (ok bool) {
 			}
 
 			// if the node has single child left, merge with its parent
-			if len(n.children) == 1 {
+			if len(n.children) == 1 && n != t.root {
 				n.key += n.children[0].key
 				n.value = n.children[0].value
 				n.children = n.children[0].children
