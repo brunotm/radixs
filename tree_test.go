@@ -54,70 +54,62 @@ var stringRep = `D, W
 3, 1                key: ing -> 85
 `
 
+func newAssert(t testing.TB) func(cond bool, kvs ...interface{}) {
+	return func(cond bool, args ...interface{}) {
+		if !cond {
+			t.Helper()
+			t.Error(args...)
+		}
+	}
+}
+
 func TestTreeSize(t *testing.T) {
+	assert := newAssert(t)
+
 	tr := FromMap(pairs)
+	assert(tr.Size() == uint64(len(pairs)), "expected size:", len(pairs), "got:", tr.Size())
 
-	if tr.Size() != uint64(len(pairs)) {
-		t.Errorf("expected size: %d, got %d\n%s\n", len(pairs), tr.size, tr.String())
-	}
+	err := tr.Delete("smart")
+	assert(err == nil && tr.Size() == uint64(len(pairs))-1, "expected size:", len(pairs)-1, "got:", tr.Size(), "err:", err)
 
-	tr.Delete("smart")
-	if tr.Size() != uint64(len(pairs))-1 {
-		t.Errorf("expected size: %d, got %d\n%s\n", len(pairs), tr.size, tr.String())
-	}
-
-	tr.DeletePrefix("rubber")
-	if tr.Size() != uint64(len(pairs))-4 {
-		t.Errorf("expected size: %d, got %d\n%s\n", len(pairs), tr.size, tr.String())
-	}
+	err = tr.DeletePrefix("rubber")
+	assert(err == nil && tr.Size() == uint64(len(pairs))-4, "expected size:", len(pairs)-4, "got:", tr.Size(), "err:", err)
 }
 
 func TestStringRep(t *testing.T) {
+	assert := newAssert(t)
 	tr := FromMap(pairs)
-	if tr.String() != stringRep {
-		t.Errorf("expected:\n%s \ngot:\n%s\n", stringRep, tr.String())
-	}
+	assert(tr.String() == stringRep, "expected:", stringRep, "got:", tr.String())
 }
 
 func TestSetGet(t *testing.T) {
+	assert := newAssert(t)
 	tr := FromMap(pairs)
 
 	for k, v := range pairs {
-		value, ok := tr.Get(k)
-		if !ok {
-			t.Errorf("key %s should be present in tree\n%s", k, tr.String())
-		}
-
-		if value != v {
-			t.Errorf("key: %s, value: %#v, expected: %#v\n%s", k, value, v, tr.String())
-		}
+		value, err := tr.Get(k)
+		assert(err == nil, "get key:", k, "error:", err)
+		assert(value == v, "key:", k, "expected value:", v, "got:", value)
 	}
 
-	value, ok := tr.Get("smalerishy")
-	if ok {
-		t.Errorf("key: sma, value: %#v, should not exist\n%s", value, tr.String())
-	}
+	value, err := tr.Get("smalerishy")
+	assert(err == ErrKeyNotFound, "key: smalerishy, should not exist, value:", value)
 
-	value, ok = tr.Get("romanei")
-	if ok {
-		t.Errorf("key: sma, value: %#v, should not exist\n%s", value, tr.String())
-	}
+	value, err = tr.Get("romanei")
+	assert(err == ErrKeyNotFound, "key: romanei, should not exist, value:", value)
 
-	value, ok = tr.Get("")
-	if ok {
-		t.Errorf("get empty key value: %#v, should not exist\n%s", value, tr.String())
-	}
+	value, err = tr.Get("")
+	assert(err == ErrEmptyKey, "empty key, should not exist, value:", value)
 
-	if tr.Set("", "abc") {
-		t.Errorf("empty key was set\n%s", tr.String())
-	}
+	err = tr.Set("", "abc")
+	assert(err == ErrEmptyKey, "empty key was set, err:", err)
 
-	if tr.Set("abc", nil) {
-		t.Errorf("nil value was set\n%s", tr.String())
-	}
+	err = tr.Set("abc", nil)
+	assert(err == ErrNilValue, "nil value was set, err:", err)
 }
 
 func TestSetUpdate(t *testing.T) {
+	assert := newAssert(t)
 	kv := copyMap(pairs)
 	tr := FromMap(kv)
 
@@ -129,204 +121,143 @@ func TestSetUpdate(t *testing.T) {
 	}
 
 	for k, v := range kv {
-		value, ok := tr.Get(k)
-		if !ok {
-			t.Errorf("key %s should be present in tree\n%s", k, tr.String())
-		}
-
-		if value != v {
-			t.Errorf("key: %s, value: %#v, expected: %#v\n%s", k, value, v, tr.String())
-		}
+		value, err := tr.Get(k)
+		assert(err == nil, "error fetching key:", k)
+		assert(value == v, "value differ for key:", k, "expected:", v, "got:", value)
 	}
 }
 
 func TestSetSplit(t *testing.T) {
+	assert := newAssert(t)
 	tr := FromMap(pairs)
 	k := "smash"
 	v := "potato"
 	tr.Set(k, v)
 
-	value, ok := tr.Get(k)
-	if !ok {
-		t.Errorf("key %s should be present in tree\n%s", k, tr.String())
-	}
-
-	if value != v {
-		t.Errorf("key: %s, value: %#v, expected: %#v\n%s", k, value, v, tr.String())
-	}
+	value, err := tr.Get(k)
+	assert(err == nil, "key:", k, "not found, err:", err)
+	assert(value == v, "value differ for key:", k, "expected:", v, "got:", value)
 }
 
 func TestLongestMatch(t *testing.T) {
+	assert := newAssert(t)
 	tr := FromMap(pairs)
 
-	prefix, value, ok := tr.LongestMatch("smarties")
-	if !ok {
-		t.Errorf("longest match for smarties not found\n%s", tr.String())
-	}
+	key := "smarties"
+	expected := "smart"
+	prefix, value, err := tr.LongestMatch(key)
+	assert(err == nil, "longest match for key:", key, "not found, err:", err)
+	assert(prefix == expected, "unmatched longest prefix, expected:", "smart", "got:", prefix)
+	assert(value == pairs[expected], "unmatched longest prefix value, expected:", pairs[expected], "got:", value)
 
-	if prefix != "smart" {
-		t.Errorf(
-			"longest match for smarties expected: smart, got: %s\n%s",
-			prefix, tr.String(),
-		)
-	}
+	key = "rubberized"
+	expected = "rubberized"
+	prefix, value, err = tr.LongestMatch(key)
+	assert(err == nil, "longest match for key:", key, "not found, err:", err)
+	assert(prefix == expected, "unmatched longest prefix, expected:", expected, "got:", prefix)
+	assert(value == pairs[expected], "unmatched longest prefix value, expected:", pairs[expected], "got:", value)
 
-	if value != pairs["smart"] {
-		t.Errorf(
-			"longest match for smarties expected value: %#v, got: %s\n%s",
-			pairs["smart"], value, tr.String())
-	}
-
-	prefix, value, ok = tr.LongestMatch("rubberized")
-	if !ok {
-		t.Errorf("longest match for rubberized not found\n%s", tr.String())
-	}
-
-	if prefix != "rubberized" {
-		t.Errorf(
-			"longest match for rubberized expected: rubberized, got: %s\n%s",
-			prefix, tr.String(),
-		)
-	}
-
-	if value != pairs["rubberized"] {
-		t.Errorf(
-			"longest match for rubberized expected value: %#v, got: %s\n%s",
-			pairs["rubberized"], value, tr.String())
-	}
-
-	_, _, ok = tr.LongestMatch("smallest")
-	if ok {
-		t.Errorf("longest match for smallest should not exist\n%s", tr.String())
-	}
-
+	_, _, err = tr.LongestMatch("smallest")
+	assert(err != nil, "longest match for key:", key, "should not exist")
 }
 
 func TestSetDelete(t *testing.T) {
+	assert := newAssert(t)
 	tr := FromMap(pairs)
 
-	if tr.Delete("toma") {
-		t.Errorf("deleted non existing key: romarish\n%s", tr.String())
-	}
+	key := "toma"
+	err := tr.Delete(key)
+	assert(err == ErrKeyNotFound, "deleted non existing key:", key, "err:", err)
 
-	if tr.Delete("romarish") {
-		t.Errorf("deleted non existing key: romarish\n%s", tr.String())
-	}
+	key = "romarish"
+	err = tr.Delete(key)
+	assert(err == ErrKeyNotFound, "deleted non existing key:", key, "err:", err)
 
-	if !tr.Delete("roma") {
-		t.Errorf("failed to delete key: roma\n%s", tr.String())
-	}
+	key = "roma"
+	err = tr.Delete(key)
+	assert(err == nil, "failed to delete existing key:", key, "err:", err)
 
-	if !tr.Delete("smart") {
-		t.Errorf("failed to delete key: smart\n%s", tr.String())
-	}
+	key = "smart"
+	err = tr.Delete(key)
+	assert(err == nil, "failed to delete existing key:", key, "err:", err)
 
-	if !tr.Delete("rubberized") {
-		t.Errorf("failed to delete key: rubberized\n%s", tr.String())
-	}
+	key = "rubberized"
+	err = tr.Delete(key)
+	assert(err == nil, "failed to delete existing key:", key, "err:", err)
 
-	if !tr.Delete("smallish") {
-		t.Errorf("failed to delete key: rubberized\n%s", tr.String())
-	}
+	key = "smallish"
+	err = tr.Delete(key)
+	assert(err == nil, "failed to delete existing key:", key, "err:", err)
 
-	k := "romanus"
-	value, ok := tr.Get(k)
-	if !ok {
-		t.Errorf("key %s should be present in tree\n%s", k, tr.String())
-	}
+	key = "romanus"
+	value, err := tr.Get(key)
+	assert(err == nil, "failed to get existing key:", key, "err:", err)
+	assert(value == pairs[key], "wrong value:", value, "for key:", key)
 
-	if value != pairs[k] {
-		t.Errorf("key: %s, value: %#v, expected: %#v\n%s", k, value, pairs[k], tr.String())
-	}
+	key = "smarter"
+	value, err = tr.Get(key)
+	assert(err == nil, "failed to get existing key:", key, "err:", err)
+	assert(value == pairs[key], "wrong value:", value, "for key:", key)
 
-	k = "smarter"
-	value, ok = tr.Get(k)
-	if !ok {
-		t.Errorf("key %s should be present in tree\n%s", k, tr.String())
-	}
-
-	if value != pairs[k] {
-		t.Errorf("key: %s, value: %#v, expected: %#v\n%s", k, value, pairs[k], tr.String())
-	}
-
-	k = "rubberize"
-	value, ok = tr.Get(k)
-	if !ok {
-		t.Errorf("key %s should be present in tree\n%s", k, tr.String())
-	}
-
-	if value != pairs[k] {
-		t.Errorf("key: %s, value: %#v, expected: %#v\n%s", k, value, pairs[k], tr.String())
-	}
+	key = "rubberize"
+	value, err = tr.Get(key)
+	assert(err == nil, "failed to get existing key:", key, "err:", err)
+	assert(value == pairs[key], "wrong value:", value, "for key:", key)
 }
 
 func TestDeletePrefix(t *testing.T) {
+	assert := newAssert(t)
 	tr := FromMap(pairs)
 
-	if !tr.DeletePrefix("rubbe") {
-		t.Errorf("failed to delete existing prefix: rubbe\n%s", tr.String())
-	}
+	key := "rubbe"
+	err := tr.DeletePrefix(key)
+	assert(err == nil, "failed to delete prefix:", key, "err:", err)
 
-	k := "rube"
-	value, ok := tr.Get(k)
-	if !ok {
-		t.Errorf("key %s should be present in tree\n%s", k, tr.String())
-	}
+	key = "rube"
+	value, err := tr.Get(key)
+	assert(err == nil, "failed to get existing key:", key, "err:", err)
+	assert(value == pairs[key], "wrong value:", value, "for key:", key)
 
-	if value != pairs[k] {
-		t.Errorf("key: %s, value: %#v, expected: %#v\n%s", k, value, pairs[k], tr.String())
-	}
+	key = "rubber"
+	value, err = tr.Get(key)
+	assert(err == ErrKeyNotFound, "get non existing key:", key, "err:", err)
+	assert(value == nil, "wrong value:", value, "for key:", key)
 
-	k = "rubber"
-	value, ok = tr.Get(k)
-	if ok {
-		t.Errorf("key %s, value: %#v should not be present in tree\n%s", k, value, tr.String())
-	}
+	key = "rubberized"
+	value, err = tr.Get(key)
+	assert(err == ErrKeyNotFound, "get non existing key:", key, "err:", err)
+	assert(value == nil, "wrong value:", value, "for key:", key)
 
-	k = "rubberized"
-	value, ok = tr.Get(k)
-	if ok {
-		t.Errorf("key %s, value: %#v should not be present in tree\n%s", k, value, tr.String())
-	}
+	key = "rubberize"
+	value, err = tr.Get(key)
+	assert(err == ErrKeyNotFound, "get non existing key:", key, "err:", err)
+	assert(value == nil, "wrong value:", value, "for key:", key)
 
-	k = "rubberize"
-	value, ok = tr.Get(k)
-	if ok {
-		t.Errorf("key %s, value: %#v should not be present in tree\n%s", k, value, tr.String())
-	}
+	key = "small"
+	err = tr.DeletePrefix(key)
+	assert(err == nil, "failed to delete prefix:", key, "err:", err)
 
-	if !tr.DeletePrefix("small") {
-		t.Errorf("failed to delete existing prefix: rubbe\n%s", tr.String())
-	}
-
-	k = "smaller"
-	value, ok = tr.Get(k)
-	if ok {
-		t.Errorf("key %s, value: %#v should not be present in tree\n%s", k, value, tr.String())
-	}
+	key = "smaller"
+	value, err = tr.Get(key)
+	assert(err == ErrKeyNotFound, "failed to get existing key:", key, "err:", err)
+	assert(value != pairs[key], "wrong value:", value, "for key:", key)
 }
 
 func TestIter(t *testing.T) {
+	assert := newAssert(t)
 	tr := FromMap(pairs)
 	kvs := copyMap(pairs)
 
 	tr.Iter(func(key string, value interface{}) bool {
 		v, ok := kvs[key]
-		if !ok {
-			t.Errorf("key %s, not present in source\n%s", key, tr.String())
-		}
-
-		if value != v {
-			t.Errorf("key %s, value: %#v incorrect source: %#v\n%s", key, value, v, tr.String())
-		}
+		assert(ok == true, "key:", key, "not present in source")
+		assert(value == v, "key:", key, "incorrect value:", value, "expected:", v)
 
 		delete(kvs, key)
 		return true
 	})
 
-	if len(kvs) > 0 {
-		t.Errorf("all keys should be deleted in source, remaining: %#v\n%s", kvs, tr.String())
-	}
+	assert(len(kvs) == 0, "kvs should be empty:", kvs)
 
 	var stop bool
 	tr.Iter(func(key string, value interface{}) bool {
@@ -340,43 +271,52 @@ func TestIter(t *testing.T) {
 }
 
 func TestSeWithParams(t *testing.T) {
+	assert := newAssert(t)
 	tr := New(WithParams('/', ':'))
 
-	if !tr.SetWithParams("/api/v1/projects/:project", "ProjectsHandler") {
-		t.Errorf("key should be set")
-	}
+	key := "/api/v1/projects/:project"
+	value := "ProjectsHandler"
+	err := tr.SetWithParams(key, value)
+	assert(err == nil, "error setting key:", key, "error:", err)
 
-	if !tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "InstanceHandler") {
-		t.Errorf("key should be set")
-	}
+	key = "/api/v1/projects/:project/instances/:instance"
+	value = "InstanceHandler"
+	err = tr.SetWithParams(key, value)
+	assert(err == nil, "error setting key:", key, "error:", err)
 
-	if !tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database", "DatabaseHandler") {
-		t.Errorf("key should be set")
-	}
+	key = "/api/v1/projects/:project/instances/:instance/databases/:database"
+	value = "DatabaseHandler"
+	err = tr.SetWithParams(key, value)
+	assert(err == nil, "error setting key:", key, "error:", err)
 
-	if tr.SetWithParams("/api/v1/projects//:project/instances/:instance/databases/:database", "DatabaseHandler") {
-		t.Errorf("key should not be set")
-	}
+	key = "/api/v1/projects//:project/instances/:instance/databases/:database"
+	value = "DatabaseHandler"
+	err = tr.SetWithParams(key, value)
+	assert(err == ErrInvalidKey, "set invalid key:", key, "error:", err)
 
-	if tr.SetWithParams("/api/v1:/projects/:project/instances/:instance/databases/:database", "DatabaseHandler") {
-		t.Errorf("key should not be set")
-	}
+	key = "/api/v1:/projects/:project/instances/:instance/databases/:database"
+	value = "DatabaseHandler"
+	err = tr.SetWithParams(key, value)
+	assert(err == ErrInvalidKey, "set invalid key:", key, "error:", err)
 
-	if tr.SetWithParams("/api/v1/projects/::project/instances/:instance/databases/:database", "DatabaseHandler") {
-		t.Errorf("key should not be set")
-	}
+	key = "/api/v1/projects/::project/instances/:instance/databases/:database"
+	value = "DatabaseHandler"
+	err = tr.SetWithParams(key, value)
+	assert(err == ErrInvalidKey, "set invalid key:", key, "error:", err)
 
-	if tr.SetWithParams("/api/v1/projects/project/instances/:instance/databases/:database", "DatabaseHandler") {
-		fmt.Println(tr.String())
-		t.Errorf("key should not be set")
-	}
+	key = "/api/v1/projects/project/instances/:instance/databases/:database"
+	value = "DatabaseHandler"
+	err = tr.SetWithParams(key, value)
+	assert(err == ErrConflictKey, "set conflicting key:", key, "error:", err)
 
-	if tr.SetWithParams("/api/v1/projects/:state/instances/:instance/databases/:database", "DatabaseHandler") {
-		t.Errorf("key should not be set")
-	}
+	key = "/api/v1/projects/:state/instances/:instance/databases/:database"
+	value = "DatabaseHandler"
+	err = tr.SetWithParams(key, value)
+	assert(err == ErrConflictKey, "set conflicting key:", key, "error:", err)
 }
 
 func TestGetWithParams(t *testing.T) {
+	assert := newAssert(t)
 	tr := New(WithParams('/', ':'))
 
 	tr.SetWithParams("/api/v1/projects/:project", "ProjectHandler")
@@ -384,56 +324,46 @@ func TestGetWithParams(t *testing.T) {
 	tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database", "DatabaseHandler")
 
 	params := map[string]string{}
-	v, ok := tr.GetWithParams("/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W", params)
-	if !ok {
-		t.Errorf("key should be set: %#v, %#v, %t", v, params, ok)
-	}
-	if v != "ProjectHandler" {
-		t.Errorf("invalid value")
-	}
-	if len(params) != 1 || params["project"] != "01FW1D5RWNR6MEZDJZZYJX8G2W" {
-		t.Errorf("invalid parameters")
-	}
+	key := "/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W"
+	value, err := tr.GetWithParams(key, params)
+	assert(err == nil, "failed to set key:", key, "error:", err)
+	assert(value == "ProjectHandler", "wrong value for key:", key, "got:", value, "expected:", "ProjectHandler")
+	assert(len(params) == 1 && params["project"] == "01FW1D5RWNR6MEZDJZZYJX8G2W", "invalid parameters for key:", key, params)
 
 	params = map[string]string{}
-	v, ok = tr.GetWithParams("/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459", params)
-	if !ok {
-		t.Errorf("key should be set")
-	}
-	if v != "InstanceHandler" {
-		t.Errorf("invalid value")
-	}
-	if len(params) != 2 || params["project"] != "01FW1D5RWNR6MEZDJZZYJX8G2W" || params["instance"] != "31459" {
-		t.Errorf("invalid parameters")
-	}
+	key = "/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459"
+	value, err = tr.GetWithParams(key, params)
+	assert(err == nil, "failed to set key:", key, "error:", err)
+	assert(value == "InstanceHandler", "wrong value for key:", key, "got:", value, "expected:", "InstanceHandler")
+	assert(
+		len(params) == 2 && params["project"] == "01FW1D5RWNR6MEZDJZZYJX8G2W" && params["instance"] == "31459",
+		"invalid parameters for key:", key, params,
+	)
 
 	params = map[string]string{}
-	v, ok = tr.GetWithParams("/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459/databases/ordersdb", params)
-	if !ok {
-		t.Errorf("key should be set")
-	}
-	if v != "DatabaseHandler" {
-		t.Errorf("invalid value")
-	}
-	if len(params) != 3 || params["project"] != "01FW1D5RWNR6MEZDJZZYJX8G2W" || params["instance"] != "31459" || params["database"] != "ordersdb" {
-		t.Errorf("invalid parameters")
-	}
+	key = "/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459/databases/ordersdb"
+	value, err = tr.GetWithParams(key, params)
+	assert(err == nil, "failed to set key:", key, "error:", err)
+	assert(value == "DatabaseHandler", "wrong value for key:", key, "got:", value, "expected:", "DatabaseHandler")
+	assert(
+		len(params) == 3 && params["project"] == "01FW1D5RWNR6MEZDJZZYJX8G2W" &&
+			params["instance"] == "31459" && params["database"] == "ordersdb",
+		"invalid parameters for key:", key, params,
+	)
 }
 
 func TestRandomLoad(t *testing.T) {
+	assert := newAssert(t)
 	keyCount := 100000
 	tr := New()
 
 	for x := 0; x < keyCount; x++ {
 		key := generateUUID()
-		if !tr.Set(key, x) {
-			t.Errorf("failure to set: %s", key)
-		}
+		err := tr.Set(key, x)
+		assert(err == nil, "failed to set key:", key, "err", err)
 	}
 
-	if tr.Size() != uint64(keyCount) {
-		t.Errorf("leafs expected: %d, got: %d", keyCount, tr.Size())
-	}
+	assert(tr.Size() == uint64(keyCount), "wrong leaf count, got:", tr.Size(), "expected:", keyCount)
 
 	var remove []string
 	tr.Iter(func(key string, value interface{}) bool {
@@ -442,10 +372,8 @@ func TestRandomLoad(t *testing.T) {
 	})
 
 	for x := 0; x < len(remove); x++ {
-		if !tr.Delete(remove[x]) {
-			fmt.Println(tr.String())
-			t.Errorf("failure to delete: %s", remove[x])
-		}
+		err := tr.Delete(remove[x])
+		assert(err == nil, "failed to delete key:", remove[x], "error:", err)
 	}
 }
 
