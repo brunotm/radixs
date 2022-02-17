@@ -62,7 +62,7 @@ func (t *Tree) Set(key string, value interface{}) (err error) {
 }
 
 // SetWithParams is like Set, but provides additional validation
-// to prevent invalid keys and conflicts when work with key parameters
+// to prevent invalid keys and conflicts when working with key parameters
 func (t *Tree) SetWithParams(key string, value interface{}) (err error) {
 	return t.set(key, value, true)
 }
