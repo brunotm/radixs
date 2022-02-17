@@ -339,29 +339,84 @@ func TestIter(t *testing.T) {
 	})
 }
 
-func BenchmarkSingleRead(b *testing.B) {
-	tr := FromMap(pairs)
+func TestSeWithParams(t *testing.T) {
+	tr := New(WithParams('/', ':'))
 
-	b.ReportAllocs()
-	for n := 0; n < b.N; n++ {
-		tr.Get("smart")
+	if !tr.SetWithParams("/api/v1/projects/:project", "ProjectsHandler") {
+		t.Errorf("key should be set")
+	}
+
+	if !tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "InstanceHandler") {
+		t.Errorf("key should be set")
+	}
+
+	if !tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database", "DatabaseHandler") {
+		t.Errorf("key should be set")
+	}
+
+	if tr.SetWithParams("/api/v1/projects//:project/instances/:instance/databases/:database", "DatabaseHandler") {
+		t.Errorf("key should not be set")
+	}
+
+	if tr.SetWithParams("/api/v1:/projects/:project/instances/:instance/databases/:database", "DatabaseHandler") {
+		t.Errorf("key should not be set")
+	}
+
+	if tr.SetWithParams("/api/v1/projects/::project/instances/:instance/databases/:database", "DatabaseHandler") {
+		t.Errorf("key should not be set")
+	}
+
+	if tr.SetWithParams("/api/v1/projects/project/instances/:instance/databases/:database", "DatabaseHandler") {
+		fmt.Println(tr.String())
+		t.Errorf("key should not be set")
+	}
+
+	if tr.SetWithParams("/api/v1/projects/:state/instances/:instance/databases/:database", "DatabaseHandler") {
+		t.Errorf("key should not be set")
 	}
 }
 
-func BenchmarkSingleInsert(b *testing.B) {
-	tr := FromMap(pairs)
+func TestGetWithParams(t *testing.T) {
+	tr := New(WithParams('/', ':'))
 
-	b.ReportAllocs()
-	for n := 0; n < b.N; n++ {
-		tr.Set("smarty", "value")
+	tr.SetWithParams("/api/v1/projects/:project", "ProjectHandler")
+	tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "InstanceHandler")
+	tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database", "DatabaseHandler")
+
+	params := map[string]string{}
+	v, ok := tr.GetWithParams("/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W", params)
+	if !ok {
+		t.Errorf("key should be set: %#v, %#v, %t", v, params, ok)
 	}
-}
+	if v != "ProjectHandler" {
+		t.Errorf("invalid value")
+	}
+	if len(params) != 1 || params["project"] != "01FW1D5RWNR6MEZDJZZYJX8G2W" {
+		t.Errorf("invalid parameters")
+	}
 
-func BenchmarkLongestMatch(b *testing.B) {
-	tr := FromMap(pairs)
-	b.ReportAllocs()
-	for n := 0; n < b.N; n++ {
-		_, _, _ = tr.LongestMatch("smart")
+	params = map[string]string{}
+	v, ok = tr.GetWithParams("/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459", params)
+	if !ok {
+		t.Errorf("key should be set")
+	}
+	if v != "InstanceHandler" {
+		t.Errorf("invalid value")
+	}
+	if len(params) != 2 || params["project"] != "01FW1D5RWNR6MEZDJZZYJX8G2W" || params["instance"] != "31459" {
+		t.Errorf("invalid parameters")
+	}
+
+	params = map[string]string{}
+	v, ok = tr.GetWithParams("/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459/databases/ordersdb", params)
+	if !ok {
+		t.Errorf("key should be set")
+	}
+	if v != "DatabaseHandler" {
+		t.Errorf("invalid value")
+	}
+	if len(params) != 3 || params["project"] != "01FW1D5RWNR6MEZDJZZYJX8G2W" || params["instance"] != "31459" || params["database"] != "ordersdb" {
+		t.Errorf("invalid parameters")
 	}
 }
 
@@ -375,6 +430,56 @@ func TestRandomLoad(t *testing.T) {
 
 	if tr.Size() != uint64(keyCount) {
 		t.Errorf("leafs expected: %d, got: %d", keyCount, tr.Size())
+	}
+}
+
+func BenchmarkSingleRead(b *testing.B) {
+	tr := FromMap(pairs)
+
+	b.ReportAllocs()
+	for n := 0; n < b.N; n++ {
+		tr.Get("smart")
+	}
+}
+
+func BenchmarkSingleReadWithParameters(b *testing.B) {
+	tr := FromMap(pairs, WithParams('/', ':'))
+	tr.SetWithParams("/api/v1/projects/:project", "CITY")
+	tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "MONUMENT")
+	tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database", "DatabaseHandler")
+	params := map[string]string{}
+
+	b.ReportAllocs()
+	for n := 0; n < b.N; n++ {
+		tr.GetWithParams("/api/v1/projects/Lisbon/instances/:instancer", params)
+	}
+}
+
+func BenchmarkSingleInsert(b *testing.B) {
+	tr := FromMap(pairs)
+
+	b.ReportAllocs()
+	for n := 0; n < b.N; n++ {
+		tr.Set("smarty", n)
+	}
+}
+
+func BenchmarkSingleInsertWithParameters(b *testing.B) {
+	tr := FromMap(pairs, WithParams('/', ':'))
+	tr.SetWithParams("/api/v1/projects/:project", "CITY")
+	tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "MONUMENT")
+
+	b.ReportAllocs()
+	for n := 0; n < b.N; n++ {
+		tr.SetWithParams("/api/v1/projects/:project/instances/:instance", n)
+	}
+}
+
+func BenchmarkLongestMatch(b *testing.B) {
+	tr := FromMap(pairs)
+	b.ReportAllocs()
+	for n := 0; n < b.N; n++ {
+		_, _, _ = tr.LongestMatch("smart")
 	}
 }
 
