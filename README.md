@@ -32,31 +32,31 @@ import (
 
 func main() {
 	tr := radixs.New() // radix.FromMap() alternatively build from an existing map
-	tr.Set("romane", 0)
-	tr.Set("romanus", 1)
-	tr.Set("romulus", "remus brother")
-	tr.Set("rubens", "51.2170° N, 4.4093° E")
-	tr.Set("ruber", 4)
-	tr.Set("rubicon", 108)
-	tr.Set("rubicundus", func() bool { return true })
+	_ = tr.Set("romane", 0)
+	_ = tr.Set("romanus", 1)
+	_ = tr.Set("romulus", "remus brother")
+	_ = tr.Set("rubens", "51.2170° N, 4.4093° E")
+	_ = tr.Set("ruber", 4)
+	_ = tr.Set("rubicon", 108)
+	_ = tr.Set("rubicundus", func() bool { return true })
 
-	value, ok := tr.Get("rubens")
-	fmt.Printf("value for rubens: %#v, ok: %t\n", value, ok)
+	value, err = tr.Get("rubens")
+	fmt.Printf("value for rubens: %#v, err: %s\n", value, err)
 
 	size := tr.Size()
 	fmt.Printf("tree size: %d\n", size)
 
-	key, value, ok := tr.LongestMatch("romanesco")
-	fmt.Printf("longest prefix for romanesco: %s, value: %#v, ok: %t\n",
-		key, value, ok)
+	key, value, err := tr.LongestMatch("romanesco")
+	fmt.Printf("longest prefix for romanesco: %s, value: %#v, err: %s\n",
+		key, value, err)
 
 	fmt.Printf("\ntree string representation:\n%s\n", tr.String())
 
-	ok = tr.Delete("romulus")
-	fmt.Printf("romulus deleted: %t\n", ok)
+	err = tr.Delete("romulus")
+	fmt.Printf("romulus deleted: %s\n", err)
 
-	ok = tr.DeletePrefix("rube")
-	fmt.Printf("prefix rube deleted: %t\n", ok)
+	err = tr.DeletePrefix("rube")
+	fmt.Printf("prefix rube deleted: %s\n", err)
 
 	fmt.Printf("\ntree string representation:\n%s\n", tr.String())
 
@@ -65,12 +65,11 @@ func main() {
 		fmt.Println(key, value)
 		return true
 	})
-}
 
 
-// value for rubens: "51.2170° N, 4.4093° E", ok: true
+// value for rubens: "51.2170° N, 4.4093° E", err: %!s(<nil>)
 // tree size: 7
-// longest prefix for romanesco: , value: <nil>, ok: false
+// longest prefix for romanesco: , value: <nil>, err: radixs: key not found
 
 // tree string representation:
 // D, W
@@ -87,10 +86,10 @@ func main() {
 // 4, 1                    key: r -> 4
 // 3, 3                key: ic -> <nil>
 // 4, 1                    key: on -> 108
-// 4, 1                    key: undus -> (func() bool)(0x108e200)
+// 4, 1                    key: undus -> (func() bool)(0x108f900)
 
-// romulus deleted: true
-// prefix rube deleted: true
+// romulus deleted: %!s(<nil>)
+// prefix rube deleted: %!s(<nil>)
 
 // tree string representation:
 // D, W
@@ -102,71 +101,71 @@ func main() {
 // 2, 4            key: ub -> <nil>
 // 3, 3                key: ic -> <nil>
 // 4, 1                    key: on -> 108
-// 4, 1                    key: undus -> (func() bool)(0x108e200)
+// 4, 1                    key: undus -> (func() bool)(0x108f900)
 
 // ordered iteration of the tree key/value pairs:
 // romane 0
 // romanus 1
 // rubicon 108
-// rubicundus 0x108e200
+// rubicundus 0x108f900
 ```
 
 ## Usage With Parameters
 ```go
 
-tr := radixs.New(radixs.WithParams('/', ':'))
+tr := radixs.New(radixs.WithParams('/', ':')) // delimiter: '/', parameter placeholder: ':'
 
-	fmt.Println(tr.SetWithParams("/api/v1/projects", "ProjectsHandler"))
-	fmt.Println(tr.SetWithParams("/api/v1/projects/:project", "ProjectHandler"))
-	fmt.Println(tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "InstanceHandler"))
-	fmt.Println(tr.SetWithParams("/api/v1/projects/:project/instances/:instance/operations/:operation", "OperationHandler"))
+	_ = tr.SetWithParams("/api/v1/projects", "ProjectsHandler")
+	_ = tr.SetWithParams("/api/v1/projects/:project", "ProjectHandler")
+	_ = tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "InstanceHandler")
+	_ = tr.SetWithParams("/api/v1/projects/:project/instances/:instance/operations/:operation", "OperationHandler")
 
-	fmt.Println(tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database", "DatabaseHandler"))
-	fmt.Println(tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database/resources/:rsrc", "ResourceHandler"))
-	fmt.Println(tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database/sessions/:session", "SessionHandler"))
-	fmt.Println(tr.SetWithParams("/api/v1/users", "UsersHandler"))
-	fmt.Println(tr.SetWithParams("/api/v1/users/:users", "UserHandler"))
-	fmt.Println(tr.SetWithParams("/api/v1/users/:users/messages", "MessagesHandler"))
+	_ = tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database", "DatabaseHandler")
+	_ = tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database/resources/:rsrc", "ResourceHandler")
+	_ = tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database/sessions/:session", "SessionHandler")
+	_ = tr.SetWithParams("/api/v1/users", "UsersHandler")
+	_ = tr.SetWithParams("/api/v1/users/:users", "UserHandler")
+	_ = tr.SetWithParams("/api/v1/users/:users/messages", "MessagesHandler")
 
 	fmt.Println(tr.String())
 
 	params := map[string]string{}
-	value, ok := tr.GetWithParams("/api/v1/projects", params)
-	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+	value, err := tr.GetWithParams("/api/v1/projects", params)
+	fmt.Printf("value: %#v, params: %#v, err: %s\n", value, params, err)
 
 	params = map[string]string{}
-	value, ok = tr.GetWithParams("/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W", params)
-	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+	value, err = tr.GetWithParams("/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W", params)
+	fmt.Printf("value: %#v, params: %#v, err: %s\n", value, params, err)
 
 	params = map[string]string{}
-	value, ok = tr.GetWithParams(
+	value, err = tr.GetWithParams(
 		"/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459",
 		params)
-	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+	fmt.Printf("value: %#v, params: %#v, err: %s\n", value, params, err)
 
 	params = map[string]string{}
-	value, ok = tr.GetWithParams(
+	value, err = tr.GetWithParams(
 		"/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459/operations/upgrade",
 		params)
-	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+	fmt.Printf("value: %#v, params: %#v, err: %s\n", value, params, err)
 
 	params = map[string]string{}
-	value, ok = tr.GetWithParams(
+	value, err = tr.GetWithParams(
 		"/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459/databases/ordersdb",
 		params)
-	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+	fmt.Printf("value: %#v, params: %#v, err: %s\n", value, params, err)
 
 	params = map[string]string{}
-	value, ok = tr.GetWithParams(
+	value, err = tr.GetWithParams(
 		"/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459/databases/ordersdb/resources/order_items",
 		params)
-	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+	fmt.Printf("value: %#v, params: %#v, err: %s\n", value, params, err)
 
 	params = map[string]string{}
-	value, ok = tr.GetWithParams(
+	value, err = tr.GetWithParams(
 		"/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459/databases/ordersdb/sessions/281474976710655",
 		params)
-	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+	fmt.Printf("value: %#v, params: %#v, err: %s\n", value, params, err)
 
 // D, W
 // 0, 13    root
@@ -184,13 +183,13 @@ tr := radixs.New(radixs.WithParams('/', ':'))
 // 3, 2                key: /:users -> "UserHandler"
 // 4, 1                    key: /messages -> "MessagesHandler"
 
-// value: "ProjectsHandler", params: map[string]string{}, ok: true
-// value: "ProjectHandler", params: map[string]string{"project":"01FW1D5RWNR6MEZDJZZYJX8G2W"}, ok: true
-// value: "InstanceHandler", params: map[string]string{"instance":"31459", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W"}, ok: true
-// value: "OperationHandler", params: map[string]string{"instance":"31459", "operation":"upgrade", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W"}, ok: true
-// value: "DatabaseHandler", params: map[string]string{"database":"ordersdb", "instance":"31459", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W"}, ok: true
-// value: "ResourceHandler", params: map[string]string{"database":"ordersdb", "instance":"31459", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W", "rsrc":"order_items"}, ok: true
-// value: "SessionHandler", params: map[string]string{"database":"ordersdb", "instance":"31459", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W", "session":"281474976710655"}, ok: true
+// value: "ProjectsHandler", params: map[string]string{}, err: %!s(<nil>)
+// value: "ProjectHandler", params: map[string]string{"project":"01FW1D5RWNR6MEZDJZZYJX8G2W"}, err: %!s(<nil>)
+// value: "InstanceHandler", params: map[string]string{"instance":"31459", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W"}, err: %!s(<nil>)
+// value: "OperationHandler", params: map[string]string{"instance":"31459", "operation":"upgrade", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W"}, err: %!s(<nil>)
+// value: "DatabaseHandler", params: map[string]string{"database":"ordersdb", "instance":"31459", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W"}, err: %!s(<nil>)
+// value: "ResourceHandler", params: map[string]string{"database":"ordersdb", "instance":"31459", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W", "rsrc":"order_items"}, err: %!s(<nil>)
+// value: "SessionHandler", params: map[string]string{"database":"ordersdb", "instance":"31459", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W", "session":"281474976710655"}, err: %!s(<nil>)
 ```
 
 ## Benchmarks
