@@ -425,11 +425,27 @@ func TestRandomLoad(t *testing.T) {
 	tr := New()
 
 	for x := 0; x < keyCount; x++ {
-		tr.Set(generateUUID(), x)
+		key := generateUUID()
+		if !tr.Set(key, x) {
+			t.Errorf("failure to set: %s", key)
+		}
 	}
 
 	if tr.Size() != uint64(keyCount) {
 		t.Errorf("leafs expected: %d, got: %d", keyCount, tr.Size())
+	}
+
+	var remove []string
+	tr.Iter(func(key string, value interface{}) bool {
+		remove = append(remove, key)
+		return true
+	})
+
+	for x := 0; x < len(remove); x++ {
+		if !tr.Delete(remove[x]) {
+			fmt.Println(tr.String())
+			t.Errorf("failure to delete: %s", remove[x])
+		}
 	}
 }
 
