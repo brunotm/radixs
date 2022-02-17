@@ -2,12 +2,28 @@ package radixs
 
 import (
 	"sort"
+	"strings"
 )
 
 // Set or update the value for the given key
-func (t *Tree) Set(key string, value interface{}) (ok bool) {
+func (t *Tree) set(key string, value interface{}, params bool) (ok bool) {
 	if key == "" || value == nil {
 		return false
+	}
+
+	if params {
+		// scan key and check for invalid constructs with delimiters and parameters
+		for x := 0; x < len(key); x++ {
+			// delim followed by delim
+			if key[x] == t.delimiter && key[x+1] == t.delimiter {
+				return false
+			}
+
+			// param followed by delim or delim
+			if key[x] == t.parameter && (key[x+1] == t.delimiter || key[x+1] == t.parameter) {
+				return false
+			}
+		}
 	}
 
 	n := t.root
@@ -48,8 +64,33 @@ func (t *Tree) Set(key string, value interface{}) (ok bool) {
 				// key segment shares a common prefix with the current node
 				// split at the common prefix and add children nodes
 
+				parentK := n.key[:pi]
+				childK1 := n.key[pi:]
+				childK2 := key[pi:]
+
+				// if working with parameters and the current node key at split is not
+				// an exact prefix of the current key segment we have an invalid key
+				if params {
+					nIdx := strings.IndexByte(childK1, t.parameter)
+					sIdx := strings.IndexByte(childK2, t.parameter)
+
+					// check if we have a conflicting parameter in either the search key or node key
+					// by verifying that n.key[pi:] is a prefix of key[pi:] if:
+					// we have a parameter placeholder in the search or node key after the common prefix at index 0 or 1.
+					// we have parameter placeholder at the last index of the common prefix
+					// TODO: this is plain ugly, fix it
+					if (nIdx == 0 || nIdx == 1) || (sIdx == 0 || sIdx == 1) ||
+						(key[pi-1] == t.parameter || n.key[pi-1] == t.parameter) {
+
+						if !strings.HasPrefix(childK2, childK1) {
+							return false
+						}
+
+					}
+				}
+
 				pnode = &node{
-					key:      n.key[pi:],
+					key:      childK1,
 					value:    n.value,
 					parent:   n,
 					children: n.children,
@@ -58,12 +99,12 @@ func (t *Tree) Set(key string, value interface{}) (ok bool) {
 				n.children = []*node{
 					pnode,
 					{
-						key:    key[pi:],
+						key:    childK2,
 						value:  value,
 						parent: n,
 					}}
 
-				n.key = n.key[:pi]
+				n.key = parentK
 				n.value = nil
 
 				// ensure nodes are sorted
