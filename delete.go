@@ -5,9 +5,9 @@ import (
 )
 
 // delete removes both keys and prefixes if specified
-func (t *Tree) delete(key string, prefix bool) (ok bool) {
+func (t *Tree) delete(key string, prefix bool) (err error) {
 	if key == "" {
-		return false
+		return ErrEmptyKey
 	}
 
 	n := t.root
@@ -28,7 +28,7 @@ func (t *Tree) delete(key string, prefix bool) (ok bool) {
 
 		// no results for prefix found in search
 		if i >= len(n.children) {
-			return false
+			return ErrKeyNotFound
 		}
 
 		// delete prefix remaining key segment is a prefix of next node
@@ -44,7 +44,7 @@ func (t *Tree) delete(key string, prefix bool) (ok bool) {
 			n.children = append(n.children[:i], n.children[i+1:]...)
 
 			t.size -= uint64(subSize)
-			return true
+			return nil
 		}
 
 		// key found
@@ -73,7 +73,7 @@ func (t *Tree) delete(key string, prefix bool) (ok bool) {
 			}
 
 			t.size--
-			return true
+			return nil
 		}
 
 		// if child at index i shares a common prefix with the current
