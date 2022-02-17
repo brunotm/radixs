@@ -5,24 +5,56 @@ package radixs
 // using binary searches making the tree operations very efficient
 // for large trees.
 type Tree struct {
-	size uint64
-	root *node
+	size      uint64
+	root      *node
+	delimiter byte
+	parameter byte
 }
 
 // New creates a new radix tree
-func New() (t *Tree) {
-	return &Tree{
+func New(opts ...OptFunc) (t *Tree) {
+	t = &Tree{
 		root: &node{},
+	}
+
+	for x := 0; x < len(opts); x++ {
+		opts[x](t)
+	}
+
+	return t
+}
+
+// OptFunc functional options for tree creation
+type OptFunc func(t *Tree)
+
+// WithParams sets the tree key delimiters and parameter placeholder
+// when working with path parameter in keys
+func WithParams(delimiter, parameter byte) (opt OptFunc) {
+	return func(t *Tree) {
+		t.delimiter = delimiter
+		t.parameter = parameter
 	}
 }
 
-func FromMap(m map[string]interface{}) (t *Tree) {
-	t = New()
+func FromMap(m map[string]interface{}, opts ...OptFunc) (t *Tree) {
+	t = New(opts...)
+
 	for k, v := range m {
 		t.Set(k, v)
 	}
 
 	return t
+}
+
+// Set or update the value for the given key
+func (t *Tree) Set(key string, value interface{}) (ok bool) {
+	return t.set(key, value, false)
+}
+
+// SetWithParams is like Set, but provides additional validation
+// to prevent invalid keys and conflicts when work with key parameters
+func (t *Tree) SetWithParams(key string, value interface{}) (ok bool) {
+	return t.set(key, value, true)
 }
 
 // Delete removes the provided key from the tree.
