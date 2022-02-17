@@ -46,7 +46,7 @@ linters-settings:
     statements: 80
   goconst:
     min-len: 4
-    min-occurrences: 5
+    min-occurrences: 10
   gocritic:
     settings:
       hugeParam:

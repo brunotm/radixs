@@ -46,14 +46,16 @@ func WithParams(delimiter, parameter byte) (opt OptFunc) {
 	}
 }
 
-func FromMap(m map[string]interface{}, opts ...OptFunc) (t *Tree) {
+func FromMap(m map[string]interface{}, opts ...OptFunc) (t *Tree, err error) {
 	t = New(opts...)
 
 	for k, v := range m {
-		t.Set(k, v)
+		if err = t.Set(k, v); err != nil {
+			return nil, err
+		}
 	}
 
-	return t
+	return t, nil
 }
 
 // Set or update the value for the given key

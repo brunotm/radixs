@@ -66,10 +66,11 @@ func newAssert(t testing.TB) func(cond bool, kvs ...interface{}) {
 func TestTreeSize(t *testing.T) {
 	assert := newAssert(t)
 
-	tr := FromMap(pairs)
+	tr, err := FromMap(pairs)
+	assert(err == nil, "error creating tree from map", "err:", err)
 	assert(tr.Size() == uint64(len(pairs)), "expected size:", len(pairs), "got:", tr.Size())
 
-	err := tr.Delete("smart")
+	err = tr.Delete("smart")
 	assert(err == nil && tr.Size() == uint64(len(pairs))-1, "expected size:", len(pairs)-1, "got:", tr.Size(), "err:", err)
 
 	err = tr.DeletePrefix("rubber")
@@ -78,13 +79,15 @@ func TestTreeSize(t *testing.T) {
 
 func TestStringRep(t *testing.T) {
 	assert := newAssert(t)
-	tr := FromMap(pairs)
+	tr, err := FromMap(pairs)
+	assert(err == nil, "error creating tree from map", "err:", err)
 	assert(tr.String() == stringRep, "expected:", stringRep, "got:", tr.String())
 }
 
 func TestSetGet(t *testing.T) {
 	assert := newAssert(t)
-	tr := FromMap(pairs)
+	tr, err := FromMap(pairs)
+	assert(err == nil, "error creating tree from map", "err:", err)
 
 	for k, v := range pairs {
 		value, err := tr.Get(k)
@@ -111,12 +114,13 @@ func TestSetGet(t *testing.T) {
 func TestSetUpdate(t *testing.T) {
 	assert := newAssert(t)
 	kv := copyMap(pairs)
-	tr := FromMap(kv)
+	tr, err := FromMap(kv)
+	assert(err == nil, "error creating tree from map", "err:", err)
 
 	var count int
 	for k := range kv {
 		kv[k] = count
-		tr.Set(k, count)
+		_ = tr.Set(k, count)
 		count++
 	}
 
@@ -129,10 +133,13 @@ func TestSetUpdate(t *testing.T) {
 
 func TestSetSplit(t *testing.T) {
 	assert := newAssert(t)
-	tr := FromMap(pairs)
+	tr, err := FromMap(pairs)
+	assert(err == nil, "error creating tree from map", "err:", err)
+
 	k := "smash"
 	v := "potato"
-	tr.Set(k, v)
+	err = tr.Set(k, v)
+	assert(err == nil, "error setting key:", k, "error:", err)
 
 	value, err := tr.Get(k)
 	assert(err == nil, "key:", k, "not found, err:", err)
@@ -141,7 +148,8 @@ func TestSetSplit(t *testing.T) {
 
 func TestLongestMatch(t *testing.T) {
 	assert := newAssert(t)
-	tr := FromMap(pairs)
+	tr, err := FromMap(pairs)
+	assert(err == nil, "error creating tree from map", "err:", err)
 
 	key := "smarties"
 	expected := "smart"
@@ -163,10 +171,11 @@ func TestLongestMatch(t *testing.T) {
 
 func TestSetDelete(t *testing.T) {
 	assert := newAssert(t)
-	tr := FromMap(pairs)
+	tr, err := FromMap(pairs)
+	assert(err == nil, "error creating tree from map", "err:", err)
 
 	key := "toma"
-	err := tr.Delete(key)
+	err = tr.Delete(key)
 	assert(err == ErrKeyNotFound, "deleted non existing key:", key, "err:", err)
 
 	key = "romarish"
@@ -207,10 +216,11 @@ func TestSetDelete(t *testing.T) {
 
 func TestDeletePrefix(t *testing.T) {
 	assert := newAssert(t)
-	tr := FromMap(pairs)
+	tr, err := FromMap(pairs)
+	assert(err == nil, "error creating tree from map", "err:", err)
 
 	key := "rubbe"
-	err := tr.DeletePrefix(key)
+	err = tr.DeletePrefix(key)
 	assert(err == nil, "failed to delete prefix:", key, "err:", err)
 
 	key = "rube"
@@ -245,9 +255,10 @@ func TestDeletePrefix(t *testing.T) {
 
 func TestIter(t *testing.T) {
 	assert := newAssert(t)
-	tr := FromMap(pairs)
-	kvs := copyMap(pairs)
+	tr, err := FromMap(pairs)
+	assert(err == nil, "error creating tree from map", "err:", err)
 
+	kvs := copyMap(pairs)
 	tr.Iter(func(key string, value interface{}) bool {
 		v, ok := kvs[key]
 		assert(ok == true, "key:", key, "not present in source")
@@ -319,9 +330,14 @@ func TestGetWithParams(t *testing.T) {
 	assert := newAssert(t)
 	tr := New(WithParams('/', ':'))
 
-	tr.SetWithParams("/api/v1/projects/:project", "ProjectHandler")
-	tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "InstanceHandler")
-	tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database", "DatabaseHandler")
+	err := tr.SetWithParams("/api/v1/projects/:project", "ProjectHandler")
+	assert(err == nil, "error setting key:", "/api/v1/projects/:project", "error:", err)
+
+	err = tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "InstanceHandler")
+	assert(err == nil, "error setting key:", "/api/v1/projects/:project/instances/:instance", "error:", err)
+
+	err = tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database", "DatabaseHandler")
+	assert(err == nil, "error setting key:", "/api/v1/projects/:project/instances/:instance/databases/:database", "error:", err)
 
 	params := map[string]string{}
 	key := "/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W"
@@ -378,49 +394,51 @@ func TestRandomLoad(t *testing.T) {
 }
 
 func BenchmarkSingleRead(b *testing.B) {
-	tr := FromMap(pairs)
+	assert := newAssert(b)
+	tr, err := FromMap(pairs)
+	assert(err == nil, "error creating tree from map", "err:", err)
 
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		tr.Get("smart")
+		_, _ = tr.Get("smart")
 	}
 }
 
 func BenchmarkSingleReadWithParameters(b *testing.B) {
-	tr := FromMap(pairs, WithParams('/', ':'))
-	tr.SetWithParams("/api/v1/projects/:project", "CITY")
-	tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "MONUMENT")
-	tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database", "DatabaseHandler")
+	tr, _ := FromMap(pairs, WithParams('/', ':'))
+	_ = tr.SetWithParams("/api/v1/projects/:project", "CITY")
+	_ = tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "MONUMENT")
+	_ = tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database", "DatabaseHandler")
 	params := map[string]string{}
 
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		tr.GetWithParams("/api/v1/projects/Lisbon/instances/:instancer", params)
+		_, _ = tr.GetWithParams("/api/v1/projects/Lisbon/instances/:instancer", params)
 	}
 }
 
 func BenchmarkSingleInsert(b *testing.B) {
-	tr := FromMap(pairs)
+	tr, _ := FromMap(pairs)
 
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		tr.Set("smarty", n)
+		_ = tr.Set("smarty", n)
 	}
 }
 
 func BenchmarkSingleInsertWithParameters(b *testing.B) {
-	tr := FromMap(pairs, WithParams('/', ':'))
-	tr.SetWithParams("/api/v1/projects/:project", "CITY")
-	tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "MONUMENT")
+	tr, _ := FromMap(pairs, WithParams('/', ':'))
+	_ = tr.SetWithParams("/api/v1/projects/:project", "CITY")
+	_ = tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "MONUMENT")
 
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		tr.SetWithParams("/api/v1/projects/:project/instances/:instance", n)
+		_ = tr.SetWithParams("/api/v1/projects/:project/instances/:instance", n)
 	}
 }
 
 func BenchmarkLongestMatch(b *testing.B) {
-	tr := FromMap(pairs)
+	tr, _ := FromMap(pairs)
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
 		_, _, _ = tr.LongestMatch("smart")
