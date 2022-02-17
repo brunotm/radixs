@@ -8,10 +8,11 @@ This implementation in addition of using binary searches for:
 - insert, retrieve and delete operations are non recursive in order to avoid the lack of tail call optimization in the Go compiler.
 - tree nodes are memory aligned for optimal space utilization.
 - supports longest prefix partial matches
-
+- supports key parameters and delimiters
 
 ___
-## Usage
+
+## Usage Without Parameters
 
 ```go
 package main
@@ -101,4 +102,99 @@ func main() {
 // romanus 1
 // rubicon 108
 // rubicundus 0x108e200
+```
+
+## Usage With Parameters
+```go
+
+tr := radixs.New(radixs.WithParams('/', ':'))
+
+	fmt.Println(tr.SetWithParams("/api/v1/projects", "ProjectsHandler"))
+	fmt.Println(tr.SetWithParams("/api/v1/projects/:project", "ProjectHandler"))
+	fmt.Println(tr.SetWithParams("/api/v1/projects/:project/instances/:instance", "InstanceHandler"))
+	fmt.Println(tr.SetWithParams("/api/v1/projects/:project/instances/:instance/operations/:operation", "OperationHandler"))
+
+	fmt.Println(tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database", "DatabaseHandler"))
+	fmt.Println(tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database/resources/:rsrc", "ResourceHandler"))
+	fmt.Println(tr.SetWithParams("/api/v1/projects/:project/instances/:instance/databases/:database/sessions/:session", "SessionHandler"))
+	fmt.Println(tr.SetWithParams("/api/v1/users", "UsersHandler"))
+	fmt.Println(tr.SetWithParams("/api/v1/users/:users", "UserHandler"))
+	fmt.Println(tr.SetWithParams("/api/v1/users/:users/messages", "MessagesHandler"))
+
+	fmt.Println(tr.String())
+
+	params := map[string]string{}
+	value, ok := tr.GetWithParams("/api/v1/projects", params)
+	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+
+	params = map[string]string{}
+	value, ok = tr.GetWithParams("/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W", params)
+	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+
+	params = map[string]string{}
+	value, ok = tr.GetWithParams(
+		"/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459",
+		params)
+	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+
+	params = map[string]string{}
+	value, ok = tr.GetWithParams(
+		"/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459/operations/upgrade",
+		params)
+	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+
+	params = map[string]string{}
+	value, ok = tr.GetWithParams(
+		"/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459/databases/ordersdb",
+		params)
+	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+
+	params = map[string]string{}
+	value, ok = tr.GetWithParams(
+		"/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459/databases/ordersdb/resources/order_items",
+		params)
+	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+
+	params = map[string]string{}
+	value, ok = tr.GetWithParams(
+		"/api/v1/projects/01FW1D5RWNR6MEZDJZZYJX8G2W/instances/31459/databases/ordersdb/sessions/281474976710655",
+		params)
+	fmt.Printf("value: %#v, params: %#v, ok: %t\n", value, params, ok)
+
+// D, W
+// 0, 13    root
+// 1, 13        key: /api/v1/ -> <nil>
+// 2, 9            key: projects -> "ProjectsHandler"
+// 3, 8                key: /:project -> "ProjectHandler"
+// 4, 7                    key: /instances/:instance -> "InstanceHandler"
+// 5, 6                        key: / -> <nil>
+// 6, 4                            key: databases/:database -> "DatabaseHandler"
+// 7, 3                                key: / -> <nil>
+// 8, 1                                    key: resources/:rsrc -> "ResourceHandler"
+// 8, 1                                    key: sessions/:session -> "SessionHandler"
+// 6, 1                            key: operations/:operation -> "OperationHandler"
+// 2, 3            key: users -> "UsersHandler"
+// 3, 2                key: /:users -> "UserHandler"
+// 4, 1                    key: /messages -> "MessagesHandler"
+
+// value: "ProjectsHandler", params: map[string]string{}, ok: true
+// value: "ProjectHandler", params: map[string]string{"project":"01FW1D5RWNR6MEZDJZZYJX8G2W"}, ok: true
+// value: "InstanceHandler", params: map[string]string{"instance":"31459", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W"}, ok: true
+// value: "OperationHandler", params: map[string]string{"instance":"31459", "operation":"upgrade", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W"}, ok: true
+// value: "DatabaseHandler", params: map[string]string{"database":"ordersdb", "instance":"31459", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W"}, ok: true
+// value: "ResourceHandler", params: map[string]string{"database":"ordersdb", "instance":"31459", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W", "rsrc":"order_items"}, ok: true
+// value: "SessionHandler", params: map[string]string{"database":"ordersdb", "instance":"31459", "project":"01FW1D5RWNR6MEZDJZZYJX8G2W", "session":"281474976710655"}, ok: true
+```
+
+## Benchmarks
+```
+goos: darwin
+goarch: amd64
+pkg: github.com/brunotm/radixs
+cpu: Intel(R) Core(TM) i5-8279U CPU @ 2.40GHz
+BenchmarkSingleRead-8                      41779908       26.79 ns/op      0 B/op      0 allocs/op
+BenchmarkSingleReadWithParameters-8        22239025       49.24 ns/op      0 B/op      0 allocs/op
+BenchmarkSingleInsert-8                    19442536       59.50 ns/op      8 B/op      0 allocs/op
+BenchmarkSingleInsertWithParameters-8      11472224      102.2 ns/op       8 B/op      0 allocs/op
+BenchmarkLongestMatch-8                    14452323       73.01 ns/op      5 B/op      1 allocs/op
 ```
