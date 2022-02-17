@@ -1,5 +1,15 @@
 package radixs
 
+import "fmt"
+
+var (
+	ErrKeyNotFound = fmt.Errorf("radixs: key not found")
+	ErrEmptyKey    = fmt.Errorf("radixs: key cannot be empty")
+	ErrNilValue    = fmt.Errorf("radixs: value cannot be nil")
+	ErrConflictKey = fmt.Errorf("radixs: conflicting key")
+	ErrInvalidKey  = fmt.Errorf("radixs: invalid key")
+)
+
 // Tree is a compact radix (compact prefix) tree which is guaranteed
 // to be sorted. Key/Value pairs are always inserted, retrieved and updated
 // using binary searches making the tree operations very efficient
@@ -47,24 +57,24 @@ func FromMap(m map[string]interface{}, opts ...OptFunc) (t *Tree) {
 }
 
 // Set or update the value for the given key
-func (t *Tree) Set(key string, value interface{}) (ok bool) {
+func (t *Tree) Set(key string, value interface{}) (err error) {
 	return t.set(key, value, false)
 }
 
 // SetWithParams is like Set, but provides additional validation
 // to prevent invalid keys and conflicts when work with key parameters
-func (t *Tree) SetWithParams(key string, value interface{}) (ok bool) {
+func (t *Tree) SetWithParams(key string, value interface{}) (err error) {
 	return t.set(key, value, true)
 }
 
 // Delete removes the provided key from the tree.
 // It returns false if the key was not found.
-func (t *Tree) Delete(key string) (ok bool) {
+func (t *Tree) Delete(key string) (err error) {
 	return t.delete(key, false)
 }
 
 // DeletePrefix deletes all keys under the given prefix
-func (t *Tree) DeletePrefix(key string) (ok bool) {
+func (t *Tree) DeletePrefix(key string) (err error) {
 	return t.delete(key, true)
 }
 
