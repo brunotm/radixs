@@ -2,7 +2,72 @@ package radixs
 
 import (
 	"sort"
+	"strings"
 )
+
+// GetWithParams is like Get but extracts path parameters and stores them
+// into the provided params argument which will be accessible after GetWithParams returns.
+func (t *Tree) GetWithParams(key string, params map[string]string) (value interface{}, ok bool) {
+	if key == "" {
+		return nil, false
+	}
+
+	n := t.root
+	for {
+		// obtain the longest common prefix for the current
+		// search key and node key
+		pi := longestPrefix(n.key, key)
+		key = key[pi:]
+
+		// binary search for prefix
+		i := sort.Search(len(n.children), func(x int) bool {
+			pIdx := longestPrefix(n.children[x].key, key)
+			if pIdx > -1 {
+				if len(n.children[x].key) > pIdx && n.children[x].key[pIdx:][0] == t.parameter {
+					return true
+				}
+			}
+
+			return n.children[x].key[0] >= key[0]
+		})
+
+		// end of search no node with prefix found
+		if i >= len(n.children) {
+			return nil, false
+		}
+
+		pIdx := strings.IndexByte(n.children[i].key, t.parameter)
+		if pIdx > 0 {
+			key = key[pIdx:]
+			paramName := n.children[i].key[pIdx+1:]
+
+			dIdx := strings.IndexByte(key, t.delimiter)
+			if dIdx >= 0 {
+				params[paramName] = key[:dIdx]
+				key = key[dIdx:]
+			} else {
+				params[paramName] = key
+			}
+
+			if dIdx < 0 {
+				return n.children[i].value, true
+			}
+
+			key = n.children[i].key + key
+			n = n.children[i]
+			continue
+
+		}
+
+		if n.children[i].key == key {
+			// exact match found
+			return n.children[i].value, n.children[i].value != nil
+		}
+
+		// child is a prefix of the search key, continue
+		n = n.children[i]
+	}
+}
 
 // Get retrieves the value for the given key.
 // It returns false if the key was not found.
