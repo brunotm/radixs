@@ -6,9 +6,13 @@ import (
 )
 
 // Set or update the value for the given key
-func (t *Tree) set(key string, value interface{}, params bool) (ok bool) {
-	if key == "" || value == nil {
-		return false
+func (t *Tree) set(key string, value interface{}, params bool) (err error) {
+	if key == "" {
+		return ErrEmptyKey
+	}
+
+	if value == nil {
+		return ErrNilValue
 	}
 
 	if params {
@@ -16,12 +20,12 @@ func (t *Tree) set(key string, value interface{}, params bool) (ok bool) {
 		for x := 0; x < len(key); x++ {
 			// delim followed by delim
 			if key[x] == t.delimiter && key[x+1] == t.delimiter {
-				return false
+				return ErrInvalidKey
 			}
 
 			// param followed by delim or delim
 			if key[x] == t.parameter && (key[x+1] == t.delimiter || key[x+1] == t.parameter) {
-				return false
+				return ErrInvalidKey
 			}
 		}
 	}
@@ -35,7 +39,7 @@ func (t *Tree) set(key string, value interface{}, params bool) (ok bool) {
 				t.size++
 			}
 			n.value = value
-			return true
+			return nil
 		}
 
 		// obtain the longest common prefix for the current search key
@@ -83,7 +87,7 @@ func (t *Tree) set(key string, value interface{}, params bool) (ok bool) {
 						(key[pi-1] == t.parameter || n.key[pi-1] == t.parameter) {
 
 						if !strings.HasPrefix(childK2, childK1) {
-							return false
+							return ErrConflictKey
 						}
 
 					}
@@ -119,7 +123,7 @@ func (t *Tree) set(key string, value interface{}, params bool) (ok bool) {
 			}
 
 			t.size++
-			return true
+			return nil
 		}
 
 		key = key[pi:]
@@ -147,7 +151,7 @@ func (t *Tree) set(key string, value interface{}, params bool) (ok bool) {
 			}
 
 			t.size++
-			return true
+			return nil
 		}
 
 		// insertion index is bigger than children size, append to it
@@ -160,6 +164,6 @@ func (t *Tree) set(key string, value interface{}, params bool) (ok bool) {
 			})
 
 		t.size++
-		return true
+		return nil
 	}
 }
