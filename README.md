@@ -1,5 +1,12 @@
 # radixs
 
+[![Build Status](https://github.com/brunotm/radixs/actions/workflows/test.yml/badge.svg)](https://github.com/brunotm/radixs/actions)
+[![Go Report Card](https://goreportcard.com/badge/brunotm/radixs?cache=0)](https://goreportcard.com/report/brunotm/radixs)
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/brunotm/radixs)
+[![Apache 2 licensed](https://img.shields.io/badge/license-Apache2-blue.svg)](https://raw.githubusercontent.com/brunotm/radixs/master/LICENSE)
+
+---
+
 A Go implementation of a radix tree for building fast and compact in-memory indexes, that uses binary searches to speed up insert, retrieve and delete operations on dense trees.
 
 This implementation in addition of using binary searches for:
