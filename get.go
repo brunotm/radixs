@@ -114,6 +114,10 @@ func (t *Tree) Get(key string) (value interface{}, err error) {
 // LongestMatch is like Get, but instead of an
 // exact match, it will return the longest prefix match.
 func (t *Tree) LongestMatch(key string) (match string, value interface{}, err error) {
+	if key == "" {
+		return "", nil, ErrEmptyKey
+	}
+
 	n := t.root
 	for {
 		// obtain the longest common prefix for the current search key and node key
