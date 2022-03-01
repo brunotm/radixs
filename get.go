@@ -127,14 +127,13 @@ func (t *Tree) LongestMatch(key string) (match string, value interface{}, err er
 }
 
 // NeighborMatch is like LongestMatch, but returns the longest match and surrounding keys:
-// parent, match, siblings, children.
-func (t *Tree) NeighborMatch(key string) (matches map[string]interface{}, err error) {
+// parent, match, siblings, children and stores them into the provided matches map.
+func (t *Tree) NeighborMatch(key string, matches map[string]interface{}) (err error) {
 	match, n, err := t.longestMatch(key)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	matches = make(map[string]interface{})
 	// add current node
 	matches[match] = n.value
 
@@ -160,7 +159,7 @@ func (t *Tree) NeighborMatch(key string) (matches map[string]interface{}, err er
 		}
 	}
 
-	return matches, nil
+	return nil
 }
 
 func (t *Tree) longestMatch(key string) (match string, v *node, err error) {

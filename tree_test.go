@@ -381,7 +381,8 @@ func TestNeighborMatch(t *testing.T) {
 		"sma": 677, "small": 67, "smaller": 81, "smallish": 82, "smart": 83,
 	}
 
-	neighboors, err := tr.NeighborMatch("smalle")
+	neighboors := make(map[string]interface{})
+	err = tr.NeighborMatch("smalle", neighboors)
 	assert(err == nil, "error in neighbor match", "err:", err)
 
 	for k, v := range expect {
@@ -401,6 +402,10 @@ func TestSearchKeyExhaustion(t *testing.T) {
 
 	match, _, err := tr.LongestMatch("smalle")
 	assert(err == nil && match == "small", "longest match: invalid match", match, "err:", err)
+
+	neighboors := make(map[string]interface{})
+	err = tr.NeighborMatch("smalle", neighboors)
+	assert(err == nil && len(neighboors) == 4, "neighbor match: invalid matches:", neighboors, "err:", err)
 }
 
 func TestRandomLoad(t *testing.T) {
