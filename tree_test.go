@@ -368,6 +368,41 @@ func TestGetWithParams(t *testing.T) {
 	)
 }
 
+func TestNeighborMatch(t *testing.T) {
+	assert := newAssert(t)
+
+	tr, err := FromMap(pairs)
+	assert(err == nil, "error creating tree from map", "err:", err)
+
+	_ = tr.Set("small", 67)
+	_ = tr.Set("sma", 677)
+
+	expect := map[string]interface{}{
+		"sma": 677, "small": 67, "smaller": 81, "smallish": 82, "smart": 83,
+	}
+
+	neighboors, err := tr.NeighborMatch("smalle")
+	assert(err == nil, "error in neighbor match", "err:", err)
+
+	for k, v := range expect {
+		assert(neighboors[k] == v, "invalid result for key:", k, "expected:", v, "got:", neighboors[k])
+	}
+}
+
+func TestSearchKeyExhaustion(t *testing.T) {
+	assert := newAssert(t)
+
+	tr, err := FromMap(pairs)
+	assert(err == nil, "error creating tree from map", "err:", err)
+	_ = tr.Set("small", 67)
+
+	_, err = tr.Get("smalle")
+	assert(err != nil, "get: key should not exist", "err:", err)
+
+	match, _, err := tr.LongestMatch("smalle")
+	assert(err == nil && match == "small", "longest match: invalid match", match, "err:", err)
+}
+
 func TestRandomLoad(t *testing.T) {
 	assert := newAssert(t)
 	keyCount := 100000
