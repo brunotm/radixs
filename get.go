@@ -87,6 +87,10 @@ func (t *Tree) Get(key string) (value interface{}, err error) {
 		pi := longestPrefix(n.key, key)
 		key = key[pi:]
 
+		if key == "" {
+			return nil, ErrKeyNotFound
+		}
+
 		// binary search for prefix
 		i := sort.Search(len(n.children), func(x int) bool {
 			return n.children[x].key[0] >= key[0]
@@ -114,6 +118,52 @@ func (t *Tree) Get(key string) (value interface{}, err error) {
 // LongestMatch is like Get, but instead of an
 // exact match, it will return the longest prefix match.
 func (t *Tree) LongestMatch(key string) (match string, value interface{}, err error) {
+	match, n, err := t.longestMatch(key)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return match, n.value, nil
+}
+
+// NeighborMatch is like LongestMatch, but returns the longest match and surrounding keys:
+// parent, match, siblings, children.
+func (t *Tree) NeighborMatch(key string) (matches map[string]interface{}, err error) {
+	match, n, err := t.longestMatch(key)
+	if err != nil {
+		return nil, err
+	}
+
+	matches = make(map[string]interface{})
+	// add current node
+	matches[match] = n.value
+
+	// add current node children
+	for x := 0; x < len(n.children); x++ {
+		if n.children[x].value != nil {
+			matches[match+n.children[x].key] = n.children[x].value
+		}
+	}
+
+	// add current node parent
+	pKey := match[:len(n.parent.key)]
+	if n.parent.key != "" && n.parent.value != nil {
+		matches[pKey] = n.parent.value
+	}
+
+	// add current node siblings
+	if len(n.parent.children) > 1 {
+		for x := 0; x < len(n.parent.children); x++ {
+			if n.parent.children[x].key != n.key && n.parent.children[x].value != nil {
+				matches[pKey+n.parent.children[x].key] = n.parent.children[x].value
+			}
+		}
+	}
+
+	return matches, nil
+}
+
+func (t *Tree) longestMatch(key string) (match string, v *node, err error) {
 	if key == "" {
 		return "", nil, ErrEmptyKey
 	}
@@ -126,10 +176,15 @@ func (t *Tree) LongestMatch(key string) (match string, value interface{}, err er
 		match += key[:pi]
 		key = key[pi:]
 
-		// binary search for prefix
-		i := sort.Search(len(n.children), func(x int) bool {
-			return n.children[x].key[0] >= key[0]
-		})
+		var i int
+		if key != "" {
+			// binary search for prefix
+			i = sort.Search(len(n.children), func(x int) bool {
+				return n.children[x].key[0] >= key[0]
+			})
+		} else {
+			i = len(n.children) + 1
+		}
 
 		// end of search, reverse walk the tree until the longest match
 		if i >= len(n.children) {
@@ -138,7 +193,7 @@ func (t *Tree) LongestMatch(key string) (match string, value interface{}, err er
 				match = match[:len(match)-pi]
 
 				if n.value != nil {
-					return match, n.value, nil
+					return match, n, nil
 				}
 
 				if n.parent == nil {
@@ -152,7 +207,7 @@ func (t *Tree) LongestMatch(key string) (match string, value interface{}, err er
 			if n.children[i].value == nil {
 				return "", nil, ErrKeyNotFound
 			}
-			return match + n.children[i].key, n.children[i].value, nil
+			return match + n.children[i].key, n.children[i], nil
 		}
 
 		// child is a prefix of the search key, continue
