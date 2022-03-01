@@ -15,6 +15,7 @@ This implementation in addition of using binary searches for:
 - insert, retrieve and delete operations are non recursive in order to avoid the lack of tail call optimization in the Go compiler.
 - tree nodes are memory aligned for optimal space utilization.
 - supports longest prefix partial matches
+- supports longest prefix neighbor matches
 - supports key parameters and delimiters
 
 ___
