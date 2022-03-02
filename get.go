@@ -175,15 +175,13 @@ func (t *Tree) longestMatch(key string) (match string, v *node, err error) {
 		match += key[:pi]
 		key = key[pi:]
 
-		var i int
-		if key != "" {
-			// binary search for prefix
-			i = sort.Search(len(n.children), func(x int) bool {
-				return n.children[x].key[0] >= key[0]
-			})
-		} else {
-			i = len(n.children) + 1
-		}
+		// binary search for prefix
+		i := sort.Search(len(n.children), func(x int) bool {
+			if key == "" {
+				return false
+			}
+			return n.children[x].key[0] >= key[0]
+		})
 
 		// end of search, reverse walk the tree until the longest match
 		if i >= len(n.children) {
