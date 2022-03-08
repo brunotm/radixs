@@ -14,16 +14,11 @@ func (t *Tree) GetWithParams(key string, params map[string]string) (value interf
 
 	n := t.root
 	for {
-		// obtain the longest common prefix for the current
-		// search key and node key
-		pi := longestPrefix(n.key, key)
-		key = key[pi:]
-
 		// binary search for prefix
 		i := sort.Search(len(n.children), func(x int) bool {
-			pIdx := longestPrefix(n.children[x].key, key)
-			if pIdx > -1 {
-				if len(n.children[x].key) > pIdx && n.children[x].key[pIdx:][0] == t.parameter {
+			pi := longestPrefix(n.children[x].key, key)
+			if pi > -1 {
+				if len(n.children[x].key) > pi && n.children[x].key[pi:][0] == t.parameter {
 					return true
 				}
 			}
@@ -36,27 +31,40 @@ func (t *Tree) GetWithParams(key string, params map[string]string) (value interf
 			return nil, ErrKeyNotFound
 		}
 
-		pIdx := strings.IndexByte(n.children[i].key, t.parameter)
-		if pIdx > 0 {
-			key = key[pIdx:]
-			paramName := n.children[i].key[pIdx+1:]
+		pi := longestPrefix(n.children[i].key, key)
+		nodeKey := n.children[i].key[pi:]
+		key = key[pi:]
 
-			dIdx := strings.IndexByte(key, t.delimiter)
-			if dIdx >= 0 {
-				params[paramName] = key[:dIdx]
-				key = key[dIdx:]
-			} else {
-				params[paramName] = key
+		// parameter found, start consuming until last parameter or end of key/nodeKey
+		if len(nodeKey) > 0 && nodeKey[0] == t.parameter {
+			for len(key) > 0 && len(nodeKey) > 0 && nodeKey[0] == t.parameter {
+				name := nodeKey[1:]
+				if pdIdx := strings.IndexByte(name, t.delimiter); pdIdx > -1 {
+					name = name[:pdIdx]
+				}
+
+				value := key
+				if vdIdx := strings.IndexByte(value, t.delimiter); vdIdx > -1 {
+					value = value[:vdIdx]
+				}
+
+				params[name] = value
+				key = key[len(value):]
+				nodeKey = nodeKey[len(name)+1:] // include the parameter placeholder
+
+				if pi := longestPrefix(nodeKey, key); pi > 0 {
+					key = key[pi:]
+					nodeKey = nodeKey[pi:]
+				}
 			}
+		}
 
-			if dIdx < 0 {
+		if key == "" {
+			if nodeKey == "" {
 				return n.children[i].value, nil
 			}
 
-			key = n.children[i].key + key
-			n = n.children[i]
-			continue
-
+			return nil, ErrKeyNotFound
 		}
 
 		// exact match found
