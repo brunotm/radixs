@@ -16,11 +16,8 @@ func (t *Tree) GetWithParams(key string, params map[string]string) (value interf
 	for {
 		// binary search for prefix
 		i := sort.Search(len(n.children), func(x int) bool {
-			pi := longestPrefix(n.children[x].key, key)
-			if pi > -1 {
-				if len(n.children[x].key) > pi && n.children[x].key[pi:][0] == t.parameter {
-					return true
-				}
+			if n.children[x].key[0] == t.parameter {
+				return true
 			}
 
 			return n.children[x].key[0] >= key[0]
@@ -36,26 +33,24 @@ func (t *Tree) GetWithParams(key string, params map[string]string) (value interf
 		key = key[pi:]
 
 		// parameter found, start consuming until last parameter or end of key/nodeKey
-		if len(nodeKey) > 0 && nodeKey[0] == t.parameter {
-			for len(key) > 0 && len(nodeKey) > 0 && nodeKey[0] == t.parameter {
-				name := nodeKey[1:]
-				if pdIdx := strings.IndexByte(name, t.delimiter); pdIdx > -1 {
-					name = name[:pdIdx]
-				}
+		for len(key) > 0 && len(nodeKey) > 0 && nodeKey[0] == t.parameter {
+			name := nodeKey[1:]
+			if pdIdx := strings.IndexByte(name, t.delimiter); pdIdx > -1 {
+				name = name[:pdIdx]
+			}
 
-				value := key
-				if vdIdx := strings.IndexByte(value, t.delimiter); vdIdx > -1 {
-					value = value[:vdIdx]
-				}
+			value := key
+			if vdIdx := strings.IndexByte(value, t.delimiter); vdIdx > -1 {
+				value = value[:vdIdx]
+			}
 
-				params[name] = value
-				key = key[len(value):]
-				nodeKey = nodeKey[len(name)+1:] // include the parameter placeholder
+			params[name] = value
+			key = key[len(value):]
+			nodeKey = nodeKey[len(name)+1:] // include the parameter placeholder
 
-				if pi := longestPrefix(nodeKey, key); pi > 0 {
-					key = key[pi:]
-					nodeKey = nodeKey[pi:]
-				}
+			if pi := longestPrefix(nodeKey, key); pi > 0 {
+				key = key[pi:]
+				nodeKey = nodeKey[pi:]
 			}
 		}
 
@@ -90,36 +85,27 @@ func (t *Tree) Get(key string) (value interface{}, err error) {
 
 	n := t.root
 	for {
-		// obtain the longest common prefix for the current
-		// search key and node key
-		pi := longestPrefix(n.key, key)
-		key = key[pi:]
-
-		if key == "" {
-			return nil, ErrKeyNotFound
-		}
-
-		// binary search for prefix
-		i := sort.Search(len(n.children), func(x int) bool {
-			return n.children[x].key[0] >= key[0]
-		})
-
-		// end of search no node with prefix found
-		if i >= len(n.children) {
-			return nil, ErrKeyNotFound
-		}
-
-		// exact match found
-		if n.children[i].key == key {
-			if n.children[i].value == nil {
+		switch {
+		case key == n.key:
+			if n.value == nil {
 				return nil, ErrKeyNotFound
 			}
+			return n.value, nil
 
-			return n.children[i].value, nil
+		case strings.HasPrefix(key, n.key):
+			key = key[len(n.key):]
+			i := sort.Search(len(n.children), func(x int) bool {
+				return n.children[x].key[0] >= key[0]
+			})
+
+			if i >= len(n.children) {
+				return nil, ErrKeyNotFound
+			}
+			n = n.children[i]
+
+		default:
+			return nil, ErrKeyNotFound
 		}
-
-		// child is a prefix of the search key, continue
-		n = n.children[i]
 	}
 }
 
@@ -170,52 +156,71 @@ func (t *Tree) NeighborMatch(key string, matches map[string]interface{}) (err er
 	return nil
 }
 
-func (t *Tree) longestMatch(key string) (match string, v *node, err error) {
+func (t *Tree) longestMatch(key string) (prefix string, n *node, err error) {
 	if key == "" {
 		return "", nil, ErrEmptyKey
 	}
 
-	n := t.root
+	n = t.root
 	for {
-		// obtain the longest common prefix for the current search key and node key
-		// keep track of the accumulated prefix for returning the longest match
-		pi := longestPrefix(n.key, key)
-		match += key[:pi]
-		key = key[pi:]
+		prefix += n.key
 
-		// binary search for prefix
-		i := sort.Search(len(n.children), func(x int) bool {
-			if key == "" {
-				return false
+		if key == n.key {
+			if n.value != nil {
+				return prefix, n, nil
 			}
-			return n.children[x].key[0] >= key[0]
-		})
-
-		// end of search, reverse walk the tree until the longest match
-		if i >= len(n.children) {
-			for {
-				n = n.parent
-				match = match[:len(match)-pi]
-
-				if n.value != nil {
-					return match, n, nil
-				}
-
-				if n.parent == nil {
-					return "", nil, ErrKeyNotFound
-				}
-			}
+			break
 		}
 
-		// exact match found
-		if n.children[i].key == key {
-			if n.children[i].value == nil {
-				return "", nil, ErrKeyNotFound
+		if strings.HasPrefix(key, n.key) {
+			key = key[len(n.key):]
+
+			i := sort.Search(len(n.children), func(x int) bool {
+				return n.children[x].key[0] >= key[0]
+			})
+
+			if i >= len(n.children) {
+				break
 			}
-			return match + n.children[i].key, n.children[i], nil
+			n = n.children[i]
+			continue
 		}
 
-		// child is a prefix of the search key, continue
-		n = n.children[i]
+		break
+	}
+
+	for n.parent != nil {
+		prefix = prefix[:len(prefix)-len(n.key)]
+		n = n.parent
+		if n.value != nil {
+			return prefix, n, nil
+		}
+	}
+
+	return "", nil, ErrKeyNotFound
+}
+
+func (t *Tree) get(key string) (n *node, match bool) {
+	n = t.root
+	for {
+		switch {
+		case key == n.key:
+			return n, n.value != nil
+
+		case strings.HasPrefix(key, n.key):
+			key = key[len(n.key):]
+
+			i := sort.Search(len(n.children), func(x int) bool {
+				return n.children[x].key[0] >= key[0]
+			})
+
+			if i >= len(n.children) {
+				return n, false
+			}
+			n = n.children[i]
+
+		default:
+			return n, false
+		}
 	}
 }

@@ -34,7 +34,7 @@ func (t *Tree) set(key string, value interface{}, params bool) (err error) {
 	for {
 		// existing key, update its value
 		if n.key == key {
-			// updating an existing prefix increase tree size
+			// setting an existing prefix increase tree size
 			if n.value == nil {
 				t.size++
 			}

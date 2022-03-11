@@ -1,6 +1,8 @@
 package radixs
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var (
 	ErrKeyNotFound = fmt.Errorf("radixs: key not found")
@@ -100,16 +102,15 @@ func (t *Tree) String() (s string) {
 	return b.String()
 }
 
-func longestPrefix(s1, s2 string) int {
-	max := len(s1)
-	if l := len(s2); l < max {
+func longestPrefix(k1, k2 string) (i int) {
+	max := len(k1)
+	if l := len(k2); l < max {
 		max = l
 	}
 
-	var i int
 	for i = 0; i < max; i++ {
-		if s1[i] != s2[i] {
-			break
+		if k1[i] != k2[i] {
+			return i
 		}
 	}
 
